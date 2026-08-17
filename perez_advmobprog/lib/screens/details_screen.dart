@@ -3,6 +3,14 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:perez_advmobprog/models/product.dart';
 import 'package:perez_advmobprog/widgets/custom_text.dart';
 
+import '../models/cart.dart';
+import '../services/cart_service.dart';
+import '../services/product_service.dart';
+
+
+
+
+
 class DetailsScreen extends StatefulWidget {
   final Product product;
 
@@ -12,8 +20,49 @@ class DetailsScreen extends StatefulWidget {
   State<DetailsScreen> createState() => _DetailsScreenState();
 }
 
+
+
 class _DetailsScreenState extends State<DetailsScreen> {
   int _currentImageIndex = 0;
+
+
+//Method to add the product on the details screen to the cart
+final CartService _cartService = CartService();
+final ProductService _productService = ProductService();
+void _addToCart() async {
+ 
+  const int userId = 5;
+
+  try {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Adding to cart...')),
+    );
+
+    final List<Cart> userCarts = await _cartService.getCartByUserId(userId);
+
+    if (userCarts.isNotEmpty) {
+      final int cartId = userCarts.first.id;
+      await _cartService.addProductToCart(cartId, widget.product.id, 1);
+
+      ScaffoldMessenger.of(context).hideCurrentSnackBar();
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Product added to cart!')),
+      );
+    } else {
+      
+      ScaffoldMessenger.of(context).hideCurrentSnackBar();
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Could not find a cart for this user.')),
+      );
+    }
+  } catch (e) {
+   
+    ScaffoldMessenger.of(context).hideCurrentSnackBar();
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Error: ${e.toString()}')),
+    );
+  }
+}
 
   @override
   Widget build(BuildContext context) {
@@ -290,14 +339,7 @@ class _DetailsScreenState extends State<DetailsScreen> {
           Expanded(
             child: ElevatedButton.icon(
               onPressed: widget.product.stock > 0
-                  ? () {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: CustomText(text: 'Added to cart!'),
-                          duration: const Duration(seconds: 2),
-                        ),
-                      );
-                    }
+                  ? _addToCart
                   : null,
               icon: Icon(Icons.shopping_cart_checkout_rounded, size: 24.sp),
               label: const CustomText(

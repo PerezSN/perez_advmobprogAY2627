@@ -1,15 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-
-// models
 import '../models/product.dart';
-
-// services
 import '../services/product_service.dart';
-
 import 'package:perez_advmobprog/screens/details_screen.dart';
-
-// widgets
 import '../widgets/custom_text.dart';
 
 class ProductScreen extends StatefulWidget {

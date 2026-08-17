@@ -17,4 +17,8 @@ A flutter project that focuses on advance topics. Covering the web to mobile tra
  ##Lab 2 - API
  - Discussion:
 The model is a class that defines the structure of the data you expect from the API endpoint. The service contains the logic for network communication, it uses a package like http to make the actual API call. When the service receives a JSON response, it uses the model's fromjson method to convert the JSON into one or more model instances. Finally, screen is responsible for displaying the data. Instead, it uses a state management solution like Provider to request the data. The Provider, acting as a middleman, calls the service, gets the data, and notifies the screen that the data is ready. The screen then rebuilds and displays the data from the model objects, cleanly separating the UI from the business and data-fetching logic.
- 
+
+ ##Lab 3 - API PART 2
+ - Discussion:
+The cart model defines the data structure for cart items as received from the API. All network operations are handled by the cart_service, which includes a getCartByUserId method to fetch a specific user's cart from the /carts/user/{userId} endpoint. The cart_screen then calls this service to retrieve the data and renders the user interface, displaying the items in the cart. 
+

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:perez_advmobprog/screens/cart_screen.dart';
 
 import 'product_screen.dart';
 
@@ -19,7 +20,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   final List<Widget> _screens = [
     const ProductScreen(),
-    const Center(child: Text('Chat Screen')),
+    const CartScreen(),
     const Center(child: Text('Profile Screen')),
   ];
 
@@ -35,7 +36,7 @@ class _HomeScreenState extends State<HomeScreen> {
               ? Image.asset('assets/images/nubdexchange_logo.png', scale: 11.sp,)
               : CustomText(
                   text: (_selectedIndex == 1)
-                      ? 'Chat'
+                      ? 'Cart'
                       : (_selectedIndex == 2)
                           ? 'Profile'
                           : 'Home',
@@ -60,13 +61,27 @@ class _HomeScreenState extends State<HomeScreen> {
             });
           },
         ),
+        //This is the floating action button, it is only visible when the user in on the cart page.
+        floatingActionButton: _selectedIndex == 1
+            ? null
+            : FloatingActionButton(
+                onPressed: () {
+                
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                        content:
+                            Text('Chat functionality not implemented yet.')),  
+                  );
+                },
+                child: const Icon(Icons.chat),
+              ),
         bottomNavigationBar: BottomNavigationBar(
-          showSelectedLabels: false, //selected item
-          showUnselectedLabels: false, //unselected item
+          showSelectedLabels: false, 
+          showUnselectedLabels: false, 
           onTap: _onTappedBar,
           items: const [
             BottomNavigationBarItem(icon: Icon(Icons.shop_2), label: 'Shop'),
-            BottomNavigationBarItem(icon: Icon(Icons.chat), label: 'Chat'),
+            BottomNavigationBarItem(icon: Icon(Icons.shopping_cart), label: 'Cart'),
             BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Profile'),
           ],
           currentIndex: _selectedIndex,
