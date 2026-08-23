@@ -5,6 +5,7 @@ import 'package:perez_advmobprog/models/product.dart';
 import 'package:perez_advmobprog/screens/details_screen.dart';
 import 'package:perez_advmobprog/services/cart_service.dart';
 import 'package:perez_advmobprog/services/product_service.dart';
+import 'package:perez_advmobprog/services/user_service.dart';
 import 'package:perez_advmobprog/widgets/custom_text.dart';
 
 class CartScreen extends StatefulWidget {
@@ -22,14 +23,16 @@ class _CartScreenState extends State<CartScreen> {
   @override
   void initState() {
     super.initState();
-    _loadCart();
+    // Assign _cartFuture synchronously so FutureBuilder never sees an
+    // uninitialized late field on the first build.
+    _cartFuture = _loadCart();
   }
 
-  void _loadCart() {
-    setState(() {
-      // Hardcoded user ID to fetch the cart 
-      _cartFuture = _cartService.getCartByUserId(5); 
-    });
+  Future<List<Cart>> _loadCart() async {
+    // Read the logged-in user's id from SharedPreferences then fetch their cart
+    final userData = await UserService().getUserData();
+    final userId = userData['id'] as int;
+    return _cartService.getCartByUserId(userId);
   }
 
   void _navigateToDetails(BuildContext context, int productId) async {
@@ -48,12 +51,10 @@ class _CartScreenState extends State<CartScreen> {
     }
   }
 
-  // Placeholder for quantity adjustment
+ 
   void _adjustQuantity(CartProduct product, int change) {
-    // This is a placeholder. In a real app, you would update the state
-    // and likely call a service to update the cart on the backend.
+    
     setState(() {
-      // Re-render will be handled by FutureBuilder after a full state management solution
     });
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -62,10 +63,7 @@ class _CartScreenState extends State<CartScreen> {
     );
   }
 
-  // Placeholder for remove item
   void _removeItem(CartProduct product) {
-    // This is a placeholder. In a real app, you would update the state
-    // and likely call a service to update the cart on the backend.
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
           content:
@@ -76,8 +74,6 @@ class _CartScreenState extends State<CartScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      // The AppBar is removed as this screen is part of the HomeScreen PageView
-      // and HomeScreen already has an AppBar.
       body: FutureBuilder<List<Cart>>(
         future: _cartFuture,
         builder: (context, snapshot) {

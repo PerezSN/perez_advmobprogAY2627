@@ -22,3 +22,6 @@ The model is a class that defines the structure of the data you expect from the 
  - Discussion:
 The cart model defines the data structure for cart items as received from the API. All network operations are handled by the cart_service, which includes a getCartByUserId method to fetch a specific user's cart from the /carts/user/{userId} endpoint. The cart_screen then calls this service to retrieve the data and renders the user interface, displaying the items in the cart. 
 
+##Lab 4 - API PART 3
+- Discussion:
+The created new user model defines the data of our users, while the user service will handle the API calls, this include the loginUser method which fetches the user data from the API endpoint. When a user logs in, the user data will be fetched from the dummyjson api, it will be saved in the shared preferences using user service, then if the user logs in again it will just retrieve the data from the shared preferences instead of fetching from the API. If the user logs out, the data will be cleared from the shared preferences. The profile screen uses this stored data to display the user information. 

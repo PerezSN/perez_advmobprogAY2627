@@ -3,6 +3,7 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:perez_advmobprog/screens/cart_screen.dart';
 
 import 'product_screen.dart';
+import 'profile_screen.dart';
 
 import '../widgets/custom_text.dart';
 
@@ -21,7 +22,7 @@ class _HomeScreenState extends State<HomeScreen> {
   final List<Widget> _screens = [
     const ProductScreen(),
     const CartScreen(),
-    const Center(child: Text('Profile Screen')),
+    const ProfileScreen(),
   ];
 
   @override
