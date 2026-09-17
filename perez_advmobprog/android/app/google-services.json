@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "1046308022937",
+    "project_id": "adv-mobprog-a464e",
+    "storage_bucket": "adv-mobprog-a464e.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1046308022937:android:4fe0bef4c73a7565bf6608",
+        "android_client_info": {
+          "package_name": "com.example.perez_advmobprog"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDU5MQY9TnAOZ9M8iV5TN9o2dnU3xROd98"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

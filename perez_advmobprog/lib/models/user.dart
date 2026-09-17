@@ -1,3 +1,6 @@
+
+enum LoginType { dummyJson, firebase }
+
 class User {
   final int id;
   final String username;
@@ -8,7 +11,10 @@ class User {
   final String image;
   final String accessToken;
   final String refreshToken;
-
+  final int age;
+  final String phone;
+  final LoginType loginType;
+  //added new LoginType enum for dummyJson or Firebase, age and phone also got added
   User({
     required this.id,
     required this.username,
@@ -19,10 +25,17 @@ class User {
     required this.image,
     required this.accessToken,
     required this.refreshToken,
+    this.age = 0,
+    this.phone = '',
+    this.loginType = LoginType.dummyJson,
   });
 
-
   factory User.fromJson(Map<String, dynamic> json) {
+    LoginType type = LoginType.dummyJson;
+    if (json['loginType'] == 'firebase') {
+      type = LoginType.firebase;
+    }
+
     return User(
       id: json['id'] ?? 0,
       username: json['username'] ?? '',
@@ -33,10 +46,12 @@ class User {
       image: json['image'] ?? '',
       accessToken: json['accessToken'] ?? '',
       refreshToken: json['refreshToken'] ?? '',
+      age: json['age'] ?? 0,
+      phone: json['phone'] ?? '',
+      loginType: type,
     );
   }
 
-  
   Map<String, dynamic> toJson() {
     return {
       'id': id,
@@ -48,9 +63,11 @@ class User {
       'image': image,
       'accessToken': accessToken,
       'refreshToken': refreshToken,
+      'age': age,
+      'phone': phone,
+      'loginType': loginType == LoginType.firebase ? 'firebase' : 'dummyJson',
     };
   }
 
-  
   String get fullName => '$firstName $lastName';
 }

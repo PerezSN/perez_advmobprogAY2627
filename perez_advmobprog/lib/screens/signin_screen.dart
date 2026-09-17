@@ -1,6 +1,7 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import '../models/user.dart';
 import '../services/user_service.dart';
 
 class SignInScreen extends StatefulWidget {
@@ -10,17 +11,17 @@ class SignInScreen extends StatefulWidget {
   State<SignInScreen> createState() => _SignInScreenState();
 }
 
-
 class _SignInScreenState extends State<SignInScreen>
     with SingleTickerProviderStateMixin {
   final _formKey = GlobalKey<FormState>();
-  final _usernameController = TextEditingController();
+  final _identifierController = TextEditingController(); //username OR email
   final _passwordController = TextEditingController();
 
   bool _isLoading = false;
   bool _obscurePassword = true;
 
- 
+  LoginType _selectedType = LoginType.dummyJson;
+
   late AnimationController _slideController;
   late Animation<Offset> _slideAnimation;
   late Animation<double> _fadeAnimation;
@@ -46,52 +47,57 @@ class _SignInScreenState extends State<SignInScreen>
   @override
   void dispose() {
     _slideController.dispose();
-    _usernameController.dispose();
+    _identifierController.dispose();
     _passwordController.dispose();
     super.dispose();
   }
 
-  //sign in button functionality 
   void _login() async {
+    if (!_formKey.currentState!.validate()) return;
+
     UserService userService = UserService();
-    setState(() {
-      _isLoading = true;
-    });
-    //validation for the textfields
-    if (_formKey.currentState!.validate()) {
-      try {
+    setState(() => _isLoading = true);
+
+    try {
+      if (_selectedType == LoginType.dummyJson) {
         final response = await userService.loginUser(
-          _usernameController.text,
+          _identifierController.text.trim(),
           _passwordController.text,
         );
-
-        //save user data to the sharedpreferences
         await userService.saveUserData(response);
-
         if (!mounted) return;
-        setState(() {
-          _isLoading = false;
-        });
-        //navigate to the home screen and pass the user data
         Navigator.pushReplacementNamed(context, '/home', arguments: response);
-      } catch (e) {
-        if (!mounted) return;
-        setState(() {
-          _isLoading = false;
-        });
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Login failed: ${e.toString()}')),
+      } else {
+        //Firebase: email is the identifier
+        await userService.signIn(
+          email: _identifierController.text.trim(),
+          password: _passwordController.text,
         );
+        if (!mounted) return;
+        Navigator.pushReplacementNamed(context, '/home');
       }
-    } else {
-      setState(() {
-        _isLoading = false;
-      });
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Login failed: ${e.toString()}'),
+          backgroundColor: Colors.redAccent,
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final bool isFirebase = _selectedType == LoginType.firebase;
+    final String identifierLabel = isFirebase ? 'Email Address' : 'Username';
+    final String identifierHint =
+        isFirebase ? 'Enter your email' : 'Enter your username';
+    final IconData identifierIcon =
+        isFirebase ? Icons.email_outlined : Icons.person_outline;
+
     return Scaffold(
       body: Container(
         width: double.infinity,
@@ -109,7 +115,6 @@ class _SignInScreenState extends State<SignInScreen>
         ),
         child: Stack(
           children: [
-        
             Positioned(
               top: -90,
               right: -70,
@@ -134,14 +139,15 @@ class _SignInScreenState extends State<SignInScreen>
                 ),
               ),
             ),
-            
+
             SafeArea(
               child: SingleChildScrollView(
                 padding: EdgeInsets.symmetric(horizontal: 24.w),
                 child: Column(
                   children: [
                     SizedBox(height: 56.h),
-                    
+
+                    // App logo
                     Container(
                       width: 88.w,
                       height: 88.w,
@@ -160,7 +166,7 @@ class _SignInScreenState extends State<SignInScreen>
                       ),
                     ),
                     SizedBox(height: 22.h),
-                 
+
                     Text(
                       'Welcome Back',
                       style: TextStyle(
@@ -179,8 +185,15 @@ class _SignInScreenState extends State<SignInScreen>
                         color: Colors.white.withOpacity(0.50),
                       ),
                     ),
-                    SizedBox(height: 38.h),
-                 
+                    SizedBox(height: 24.h),
+
+                    FadeTransition(
+                      opacity: _fadeAnimation,
+                      child: _buildBackendToggle(),
+                    ),
+
+                    SizedBox(height: 24.h),
+
                     SlideTransition(
                       position: _slideAnimation,
                       child: FadeTransition(
@@ -206,20 +219,23 @@ class _SignInScreenState extends State<SignInScreen>
                                   crossAxisAlignment:
                                       CrossAxisAlignment.start,
                                   children: [
-                                    // ── Username ──
-                                    _buildLabel('Username'),
+                                    // Username OR Email (changes with toggle)
+                                    _buildLabel(identifierLabel),
                                     SizedBox(height: 8.h),
                                     _buildTextField(
-                                      controller: _usernameController,
-                                      hint: 'Enter your username',
-                                      prefixIcon: Icons.person_outline,
+                                      controller: _identifierController,
+                                      hint: identifierHint,
+                                      prefixIcon: identifierIcon,
+                                      keyboardType: isFirebase
+                                          ? TextInputType.emailAddress
+                                          : TextInputType.text,
                                       validator: (v) =>
                                           (v == null || v.trim().isEmpty)
-                                              ? 'Username is required'
+                                              ? '$identifierLabel is required'
                                               : null,
                                     ),
                                     SizedBox(height: 20.h),
-                                  
+
                                     _buildLabel('Password'),
                                     SizedBox(height: 8.h),
                                     _buildTextField(
@@ -245,7 +261,8 @@ class _SignInScreenState extends State<SignInScreen>
                                               : null,
                                     ),
                                     SizedBox(height: 32.h),
-                                  
+
+                                    // Sign In button
                                     SizedBox(
                                       width: double.infinity,
                                       height: 52.h,
@@ -277,7 +294,8 @@ class _SignInScreenState extends State<SignInScreen>
                                             shadowColor: Colors.transparent,
                                             shape: RoundedRectangleBorder(
                                               borderRadius:
-                                                  BorderRadius.circular(14.r),
+                                                  BorderRadius.circular(
+                                                      14.r),
                                             ),
                                           ),
                                           child: _isLoading
@@ -313,17 +331,36 @@ class _SignInScreenState extends State<SignInScreen>
                         ),
                       ),
                     ),
+
                     SizedBox(height: 28.h),
+
                     FadeTransition(
                       opacity: _fadeAnimation,
-                      child: Text(
-                        'Use your DummyJSON credentials to sign in.',
-                        style: TextStyle(
-                          fontFamily: 'Poppins',
-                          fontSize: 12.sp,
-                          color: Colors.white.withOpacity(0.30),
-                        ),
-                        textAlign: TextAlign.center,
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Text(
+                            "Don't have an account? ",
+                            style: TextStyle(
+                              fontFamily: 'Poppins',
+                              fontSize: 13.sp,
+                              color: Colors.white.withOpacity(0.50),
+                            ),
+                          ),
+                          GestureDetector(
+                            onTap: () => Navigator.pushNamed(
+                                context, '/signup'),
+                            child: Text(
+                              'Sign Up',
+                              style: TextStyle(
+                                fontFamily: 'Poppins',
+                                fontSize: 13.sp,
+                                fontWeight: FontWeight.w600,
+                                color: const Color(0xFF9AB0FF),
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                     SizedBox(height: 24.h),
@@ -332,6 +369,95 @@ class _SignInScreenState extends State<SignInScreen>
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildBackendToggle() {
+    return Container(
+      height: 48.h,
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.07),
+        borderRadius: BorderRadius.circular(14.r),
+        border: Border.all(color: Colors.white.withOpacity(0.14)),
+      ),
+      child: Row(
+        children: [
+          _buildToggleOption(
+            label: 'DummyJSON',
+            icon: Icons.cloud_outlined,
+            selected: _selectedType == LoginType.dummyJson,
+            onTap: () => setState(() {
+              _selectedType = LoginType.dummyJson;
+              _identifierController.clear();
+            }),
+          ),
+          _buildToggleOption(
+            label: 'Firebase',
+            icon: Icons.local_fire_department_outlined,
+            selected: _selectedType == LoginType.firebase,
+            onTap: () => setState(() {
+              _selectedType = LoginType.firebase;
+              _identifierController.clear();
+            }),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildToggleOption({
+    required String label,
+    required IconData icon,
+    required bool selected,
+    required VoidCallback onTap,
+  }) {
+    return Expanded(
+      child: GestureDetector(
+        onTap: onTap,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          margin: EdgeInsets.all(4.w),
+          decoration: BoxDecoration(
+            gradient: selected
+                ? const LinearGradient(
+                    colors: [Color(0xFF4A6CF7), Color(0xFF6C63FF)],
+                  )
+                : null,
+            borderRadius: BorderRadius.circular(10.r),
+            boxShadow: selected
+                ? [
+                    BoxShadow(
+                      color: const Color(0xFF4A6CF7).withOpacity(0.35),
+                      blurRadius: 10,
+                    )
+                  ]
+                : [],
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(icon,
+                  size: 16.sp,
+                  color: selected
+                      ? Colors.white
+                      : Colors.white.withOpacity(0.45)),
+              SizedBox(width: 6.w),
+              Text(
+                label,
+                style: TextStyle(
+                  fontFamily: 'Poppins',
+                  fontSize: 13.sp,
+                  fontWeight:
+                      selected ? FontWeight.w600 : FontWeight.w400,
+                  color: selected
+                      ? Colors.white
+                      : Colors.white.withOpacity(0.45),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -355,11 +481,13 @@ class _SignInScreenState extends State<SignInScreen>
     required IconData prefixIcon,
     bool obscure = false,
     Widget? suffixIcon,
+    TextInputType keyboardType = TextInputType.text,
     String? Function(String?)? validator,
   }) {
     return TextFormField(
       controller: controller,
       obscureText: obscure,
+      keyboardType: keyboardType,
       style: TextStyle(
         fontFamily: 'Poppins',
         color: Colors.white,
@@ -381,13 +509,11 @@ class _SignInScreenState extends State<SignInScreen>
             EdgeInsets.symmetric(vertical: 16.h, horizontal: 16.w),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12.r),
-          borderSide:
-              BorderSide(color: Colors.white.withOpacity(0.15)),
+          borderSide: BorderSide(color: Colors.white.withOpacity(0.15)),
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12.r),
-          borderSide:
-              BorderSide(color: Colors.white.withOpacity(0.15)),
+          borderSide: BorderSide(color: Colors.white.withOpacity(0.15)),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12.r),
