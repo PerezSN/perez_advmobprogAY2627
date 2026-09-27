@@ -3,9 +3,8 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:perez_advmobprog/models/cart.dart';
 import 'package:perez_advmobprog/models/product.dart';
 import 'package:perez_advmobprog/screens/details_screen.dart';
-import 'package:perez_advmobprog/services/cart_service.dart';
+import 'package:perez_advmobprog/services/local_cart.dart';
 import 'package:perez_advmobprog/services/product_service.dart';
-import 'package:perez_advmobprog/services/user_service.dart';
 import 'package:perez_advmobprog/widgets/custom_text.dart';
 
 class CartScreen extends StatefulWidget {
@@ -16,23 +15,24 @@ class CartScreen extends StatefulWidget {
 }
 
 class _CartScreenState extends State<CartScreen> {
-  late Future<List<Cart>> _cartFuture;
-  final CartService _cartService = CartService();
+  final LocalCart _localCart = LocalCart();
   final ProductService _productService = ProductService();
 
   @override
   void initState() {
     super.initState();
-    // Assign _cartFuture synchronously so FutureBuilder never sees an
-    // uninitialized late field on the first build.
-    _cartFuture = _loadCart();
+    //listen to cart changes and rebuild the screen
+    _localCart.cartNotifier.addListener(_onCartChanged);
   }
 
-  Future<List<Cart>> _loadCart() async {
-    // Read the logged-in user's id from SharedPreferences then fetch their cart
-    final userData = await UserService().getUserData();
-    final userId = userData['id'] as int;
-    return _cartService.getCartByUserId(userId);
+  @override
+  void dispose() {
+    _localCart.cartNotifier.removeListener(_onCartChanged);
+    super.dispose();
+  }
+
+  void _onCartChanged() {
+    if (mounted) setState(() {});
   }
 
   void _navigateToDetails(BuildContext context, int productId) async {
@@ -46,68 +46,47 @@ class _CartScreenState extends State<CartScreen> {
       );
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: CustomText(text: 'Failed to load product details: $e')),
+        SnackBar(content: CustomText(text: 'Failed to load product: $e')),
       );
     }
   }
 
- 
-  void _adjustQuantity(CartProduct product, int change) {
-    
-    setState(() {
-    });
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-          content: CustomText(
-              text: 'Quantity adjustment is a mock-up in this UI design.')),
-    );
+  void _increaseQuantity(CartProduct product) {
+    _localCart.increaseQuantity(product.id);
+  }
+
+  void _decreaseQuantity(CartProduct product) {
+    _localCart.decreaseQuantity(product.id);
   }
 
   void _removeItem(CartProduct product) {
+    _localCart.removeProduct(product.id);
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-          content:
-              CustomText(text: 'Remove item is a mock-up in this UI design.')),
+      SnackBar(content: CustomText(text: '${product.title} removed from cart')),
     );
   }
 
   @override
   Widget build(BuildContext context) {
+    final items = _localCart.items;
+
     return Scaffold(
-      body: FutureBuilder<List<Cart>>(
-        future: _cartFuture,
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          }
-          if (snapshot.hasError) {
-            return Center(
-                child: CustomText(text: 'Error: ${snapshot.error}'));
-          }
-          if (!snapshot.hasData || snapshot.data!.isEmpty) {
-            return _buildEmptyCart();
-          }
-
-          final cart = snapshot.data!.first;
-          final cartProducts = cart.products;
-
-          return Column(
-            children: [
-              Expanded(
-                child: ListView.builder(
-                  padding: EdgeInsets.all(16.w),
-                  itemCount: cartProducts.length,
-                  itemBuilder: (context, index) {
-                    final cartProduct = cartProducts[index];
-                    return _buildCartItem(cartProduct);
-                  },
+      body: items.isEmpty
+          ? _buildEmptyCart()
+          : Column(
+              children: [
+                Expanded(
+                  child: ListView.builder(
+                    padding: EdgeInsets.all(16.w),
+                    itemCount: items.length,
+                    itemBuilder: (context, index) {
+                      return _buildCartItem(items[index]);
+                    },
+                  ),
                 ),
-              ),
-              _buildCartSummary(cart),
-            ],
-          );
-        },
-      ),
+                _buildCartSummary(),
+              ],
+            ),
     );
   }
 
@@ -126,28 +105,10 @@ class _CartScreenState extends State<CartScreen> {
           ),
           SizedBox(height: 10.h),
           CustomText(
-            text: 'Looks like you haven\'t added anything to your cart yet.',
+            text: 'Add items from the product screen.',
             fontSize: 16.sp,
             color: Colors.grey,
             textAlign: TextAlign.center,
-          ),
-          SizedBox(height: 30.h),
-          ElevatedButton(
-            onPressed: () {
-              // This assumes the home screen can be controlled to switch tabs.
-              // In this app setup, this is for demonstration.
-            },
-            style: ElevatedButton.styleFrom(
-              padding: EdgeInsets.symmetric(horizontal: 50.w, vertical: 15.h),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(30.r),
-              ),
-            ),
-            child: CustomText(
-              text: 'Start Shopping',
-              fontSize: 16.sp,
-              fontWeight: FontWeight.bold,
-            ),
           ),
         ],
       ),
@@ -188,8 +149,7 @@ class _CartScreenState extends State<CartScreen> {
                     ),
                     SizedBox(height: 5.h),
                     CustomText(
-                      text:
-                          '\$${product.price.toStringAsFixed(2)}',
+                      text: '\$${product.price.toStringAsFixed(2)}',
                       fontSize: 15.sp,
                       fontWeight: FontWeight.bold,
                       color: Theme.of(context).colorScheme.primary,
@@ -202,8 +162,8 @@ class _CartScreenState extends State<CartScreen> {
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   IconButton(
-                    icon: Icon(Icons.remove_circle_outline, size: 22.sp),
-                    onPressed: () => _adjustQuantity(product, -1),
+                    icon: Icon(Icons.add_circle_outline, size: 22.sp),
+                    onPressed: () => _increaseQuantity(product),
                   ),
                   CustomText(
                     text: product.quantity.toString(),
@@ -211,8 +171,16 @@ class _CartScreenState extends State<CartScreen> {
                     fontWeight: FontWeight.bold,
                   ),
                   IconButton(
-                    icon: Icon(Icons.add_circle_outline, size: 22.sp),
-                    onPressed: () => _adjustQuantity(product, 1),
+                    icon: Icon(
+                      product.quantity == 1
+                          ? Icons.delete_outline
+                          : Icons.remove_circle_outline,
+                      size: 22.sp,
+                      color: product.quantity == 1 ? Colors.redAccent : null,
+                    ),
+                    onPressed: () => product.quantity == 1
+                        ? _removeItem(product)
+                        : _decreaseQuantity(product),
                   ),
                 ],
               ),
@@ -223,9 +191,12 @@ class _CartScreenState extends State<CartScreen> {
     );
   }
 
-  Widget _buildCartSummary(Cart cart) {
+  Widget _buildCartSummary() {
+    final subtotal = _localCart.subtotal;
+
     return Container(
-      padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 15.h).copyWith(bottom: 25.h),
+      padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 15.h)
+          .copyWith(bottom: 25.h),
       decoration: BoxDecoration(
         color: Theme.of(context).cardColor,
         borderRadius: const BorderRadius.only(
@@ -247,27 +218,13 @@ class _CartScreenState extends State<CartScreen> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               CustomText(
-                  text: 'Subtotal (${cart.totalProducts} items)',
+                  text: 'Subtotal (${_localCart.totalItems} items)',
                   fontSize: 16.sp,
                   color: Colors.grey),
               CustomText(
-                text: '\$${cart.total.toStringAsFixed(2)}',
+                text: '\$${subtotal.toStringAsFixed(2)}',
                 fontSize: 16.sp,
                 fontWeight: FontWeight.bold,
-              ),
-            ],
-          ),
-          SizedBox(height: 10.h),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              CustomText(text: 'Discount', fontSize: 16.sp, color: Colors.grey),
-              CustomText(
-                text:
-                    '-\$${(cart.total - cart.discountedTotal).toStringAsFixed(2)}',
-                fontSize: 16.sp,
-                fontWeight: FontWeight.bold,
-                color: Colors.green,
               ),
             ],
           ),
@@ -278,7 +235,7 @@ class _CartScreenState extends State<CartScreen> {
               CustomText(
                   text: 'Total', fontSize: 20.sp, fontWeight: FontWeight.bold),
               CustomText(
-                text: '\$${cart.discountedTotal.toStringAsFixed(2)}',
+                text: '\$${subtotal.toStringAsFixed(2)}',
                 fontSize: 20.sp,
                 fontWeight: FontWeight.bold,
                 color: Theme.of(context).colorScheme.primary,
@@ -292,8 +249,7 @@ class _CartScreenState extends State<CartScreen> {
               onPressed: () {
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(
-                      content: Text(
-                          'Checkout functionality is not implemented yet.')),
+                      content: Text('Checkout not implemented yet.')),
                 );
               },
               style: ElevatedButton.styleFrom(

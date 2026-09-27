@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../models/user.dart';
 import '../services/user_service.dart';
 
@@ -25,8 +26,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final loginType = await _userService.getLoginType();
 
     if (loginType == LoginType.firebase) {
-      //firebase: read from FirebaseAuth.currentUser
+      //firebase: read from FirebaseAuth.currentUser + SharedPrefs for extra fields
       final fbUser = _userService.currentFirebaseUser;
+      final prefs = await SharedPreferences.getInstance();
       return {
         'loginType': 'firebase',
         'firstName': fbUser?.displayName ?? fbUser?.email?.split('@').first ?? 'User',
@@ -36,8 +38,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
         'image': fbUser?.photoURL ?? '',
         'gender': '',
         'id': 0,
-        'phone': '',
-        'age': 0,
+        'phone': prefs.getString('phone') ?? '',
+        'age': prefs.getInt('age') ?? 0,
       };
     } else {
       //dummyJSON: read from SharedPreferences
@@ -428,6 +430,20 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       isDark: isDark,
                     ),
 
+                    SizedBox(height: 10.h),
+                    _buildInfoCard(
+                      icon: Icons.cake_outlined,
+                      label: 'Age',
+                      value: age > 0 ? age.toString() : '—',
+                      isDark: isDark,
+                    ),
+                    SizedBox(height: 10.h),
+                    _buildInfoCard(
+                      icon: Icons.phone_outlined,
+                      label: 'Phone',
+                      value: phone.isNotEmpty ? phone : '—',
+                      isDark: isDark,
+                    ),
                     if (!isFirebase) SizedBox(height: 10.h),
                     if (!isFirebase) _buildInfoCard(
                       icon: Icons.wc_rounded,
@@ -439,23 +455,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     ),
                     if (!isFirebase) SizedBox(height: 10.h),
                     if (!isFirebase) _buildInfoCard(
-                      icon: Icons.cake_outlined,
-                      label: 'Age',
-                      value: age > 0 ? age.toString() : '—',
-                      isDark: isDark,
-                    ),
-                    if (!isFirebase) SizedBox(height: 10.h),
-                    if (!isFirebase) _buildInfoCard(
-                      icon: Icons.phone_outlined,
-                      label: 'Phone',
-                      value: phone.isNotEmpty ? phone : '—',
-                      isDark: isDark,
-                    ),
-                    if (!isFirebase) SizedBox(height: 10.h),
-                    if (!isFirebase) _buildInfoCard(
                       icon: Icons.badge_outlined,
                       label: 'User ID',
-                      value: '#$id',
+                      value: id > 0 ? '#$id' : '—',
                       isDark: isDark,
                     ),
 

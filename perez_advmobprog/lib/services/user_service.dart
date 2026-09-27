@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -130,6 +131,13 @@ class UserService {
     await prefs.setString('lastName', '');
     await prefs.setString('image', credential.user?.photoURL ?? '');
     await prefs.setInt('id', 0);
+
+    //write to Firestore so this user appears in chat lists
+    await _saveUserToFirestore(
+      uid: credential.user!.uid,
+      email: email,
+      displayName: credential.user?.displayName ?? email.split('@').first,
+    );
     return credential;
   }
 
@@ -137,7 +145,9 @@ class UserService {
   Future<fb.UserCredential> signUp(
       {required String email,
       required String password,
-      String displayName = ''}) async {
+      String displayName = '',
+      int age = 0,
+      String phone = ''}) async {
     final credential = await _firebaseAuth.createUserWithEmailAndPassword(
       email: email,
       password: password,
@@ -153,7 +163,32 @@ class UserService {
     await prefs.setString('lastName', '');
     await prefs.setString('image', '');
     await prefs.setInt('id', 0);
+    await prefs.setInt('age', age);
+    await prefs.setString('phone', phone);
+
+    //write to Firestore so this user appears in chat lists
+    await _saveUserToFirestore(
+      uid: credential.user!.uid,
+      email: email,
+      displayName: displayName.isNotEmpty ? displayName : email.split('@').first,
+    );
     return credential;
+  }
+
+  //upserts a user document in Firestore so they appear in the chat user list
+  Future<void> _saveUserToFirestore({
+    required String uid,
+    required String email,
+    required String displayName,
+  }) async {
+    await FirebaseFirestore.instance.collection('Users').doc(uid).set(
+      {
+        'uid': uid,
+        'email': email,
+        'displayName': displayName,
+      },
+      SetOptions(merge: true),
+    );
   }
 
   //update the display name
@@ -180,11 +215,12 @@ class UserService {
   //delete a Firebase account
   Future<void> deleteAccountForFirebase(
       {required String email, required String password}) async {
+    final user = _firebaseAuth.currentUser;
+    if (user == null) throw Exception('No user is currently signed in.');
     final credential =
         fb.EmailAuthProvider.credential(email: email, password: password);
-    await _firebaseAuth.currentUser
-        ?.reauthenticateWithCredential(credential);
-    await _firebaseAuth.currentUser?.delete();
+    await user.reauthenticateWithCredential(credential);
+    await user.delete();
     final prefs = await SharedPreferences.getInstance();
     await prefs.clear();
   }

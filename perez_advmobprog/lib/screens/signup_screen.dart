@@ -90,6 +90,8 @@ class _SignUpScreenState extends State<SignUpScreen>
           displayName:
               '${_fNameController.text.trim()} ${_lNameController.text.trim()}'
                   .trim(),
+          age: int.tryParse(_ageController.text.trim()) ?? 0,
+          phone: _phoneController.text.trim(),
         );
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(

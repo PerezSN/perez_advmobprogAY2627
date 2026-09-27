@@ -5,7 +5,9 @@ import 'package:perez_advmobprog/widgets/custom_text.dart';
 
 import '../models/cart.dart';
 import '../services/cart_service.dart';
+import '../services/local_cart.dart';
 import '../services/product_service.dart';
+import '../services/user_service.dart';
 
 
 
@@ -26,37 +28,59 @@ class _DetailsScreenState extends State<DetailsScreen> {
   int _currentImageIndex = 0;
 
 
-//Method to add the product on the details screen to the cart
+//add the product to the local in-memory cart
+final LocalCart _localCart = LocalCart();
 final CartService _cartService = CartService();
-final ProductService _productService = ProductService();
 void _addToCart() async {
- 
-  const int userId = 5;
-
   try {
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text('Adding to cart...')),
     );
 
-    final List<Cart> userCarts = await _cartService.getCartByUserId(userId);
+    final userData = await UserService().getUserData();
+    final loginType = userData['loginType'] as String? ?? 'dummyJson';
 
-    if (userCarts.isNotEmpty) {
-      final int cartId = userCarts.first.id;
-      await _cartService.addProductToCart(cartId, widget.product.id, 1);
-
+    if (loginType == 'firebase') {
+      //firebase: add directly to local cart
+      _localCart.addProduct(CartProduct(
+        id: widget.product.id,
+        title: widget.product.title,
+        price: widget.product.price,
+        quantity: 1,
+        total: widget.product.price,
+        discountPercentage: 0,
+        discountedTotal: widget.product.price,
+        thumbnail: widget.product.thumbnail,
+      ));
       ScaffoldMessenger.of(context).hideCurrentSnackBar();
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Product added to cart!')),
+        const SnackBar(content: Text('Added to cart!')),
       );
     } else {
-      
+      //dummyJSON: call the API, then also add to local cart so CartScreen shows it
+      final userId = userData['id'] as int;
+      final List<Cart> userCarts =
+          await _cartService.getCartByUserId(userId);
+      if (userCarts.isNotEmpty) {
+        await _cartService.addProductToCart(
+            userCarts.first.id, widget.product.id, 1);
+      }
+      _localCart.addProduct(CartProduct(
+        id: widget.product.id,
+        title: widget.product.title,
+        price: widget.product.price,
+        quantity: 1,
+        total: widget.product.price,
+        discountPercentage: 0,
+        discountedTotal: widget.product.price,
+        thumbnail: widget.product.thumbnail,
+      ));
       ScaffoldMessenger.of(context).hideCurrentSnackBar();
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Could not find a cart for this user.')),
+        const SnackBar(content: Text('Added to cart!')),
       );
     }
   } catch (e) {
-   
     ScaffoldMessenger.of(context).hideCurrentSnackBar();
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text('Error: ${e.toString()}')),

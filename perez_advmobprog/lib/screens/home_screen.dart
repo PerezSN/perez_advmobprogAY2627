@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:perez_advmobprog/screens/cart_screen.dart';
+import 'package:perez_advmobprog/screens/chat_screen.dart';
 
 import 'product_screen.dart';
 import 'profile_screen.dart';
@@ -62,16 +63,13 @@ class _HomeScreenState extends State<HomeScreen> {
             });
           },
         ),
-        //This is the floating action button, it is only visible when the user in on the cart page.
         floatingActionButton: _selectedIndex == 1
             ? null
             : FloatingActionButton(
                 onPressed: () {
-                
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                        content:
-                            Text('Chat functionality not implemented yet.')),  
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const ChatScreen()),
                   );
                 },
                 child: const Icon(Icons.chat),
